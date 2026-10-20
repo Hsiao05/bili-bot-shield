@@ -1,0 +1,8 @@
+/*
+ * content.css —— 旧版评论 DOM（.reply-item）的兜底样式。
+ * 新版 B 站评论是 Web Components + Shadow DOM，样式隔离，折叠条/标记条一律用内联样式，
+ * 这个文件只保留旧结构的隐藏类，避免 manifest 引用缺文件。
+ */
+.bcs-hidden {
+  display: none !important;
+}

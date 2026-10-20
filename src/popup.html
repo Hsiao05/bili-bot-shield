@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="auto">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>别看大肥鱼了！</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="app">
+    <header class="app-header">
+      <div class="brand">
+        <span class="brand-icon" aria-hidden="true">
+          <svg viewBox="0 0 20 20" width="20" height="20" fill="none">
+            <path d="M10 2.1 3.9 4.5v5.2c0 3.5 2.5 6.7 6.1 7.9 3.6-1.2 6.1-4.4 6.1-7.9V4.5L10 2.1Z"
+                  stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"></path>
+            <path d="m7.1 9.9 2.1 2.1 3.7-4.1"
+                  stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
+        </span>
+        <div class="brand-text">
+          <h1 class="app-title">别看大肥鱼了！</h1>
+          <p class="app-subtitle">本地折叠 B 站评论区的 DeepSeek 机器人</p>
+        </div>
+      </div>
+      <span class="version" id="version">v0.0.0</span>
+    </header>
+
+    <div class="error-bar" id="error-bar" role="alert" hidden></div>
+
+    <div class="page-status" id="page-status" data-state="checking">正在检测当前页面…</div>
+
+    <main class="app-main">
+      <section class="card">
+        <div class="row">
+          <div class="row-text">
+            <h2 class="card-title">外观</h2>
+            <p class="hint">跟随设备会随系统的深色 / 浅色设置自动切换</p>
+          </div>
+        </div>
+        <div class="segmented" role="radiogroup" aria-label="外观">
+          <label class="seg-item">
+            <input type="radio" name="theme" id="theme-auto" value="auto">
+            <span>跟随设备</span>
+          </label>
+          <label class="seg-item">
+            <input type="radio" name="theme" id="theme-light" value="light">
+            <span>浅色</span>
+          </label>
+          <label class="seg-item">
+            <input type="radio" name="theme" id="theme-dark" value="dark">
+            <span>深色</span>
+          </label>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="row">
+          <div class="row-text">
+            <h2 class="card-title">总开关</h2>
+            <p class="hint">关闭后页面不做任何处理</p>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="enabled-toggle" aria-label="总开关">
+            <span class="slider" aria-hidden="true"></span>
+          </label>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 class="card-title">处理方式</h2>
+        <div class="options">
+          <label class="option">
+            <input type="radio" name="mode" id="mode-collapse" value="collapse">
+            <span class="option-body">
+              <span class="option-title">折叠</span>
+              <span class="option-desc">评论变成一行「🛡 疑似机器人评论，点击展开」</span>
+            </span>
+          </label>
+          <label class="option">
+            <input type="radio" name="mode" id="mode-hide" value="hide">
+            <span class="option-body">
+              <span class="option-title">隐藏</span>
+              <span class="option-desc">整条不显示</span>
+            </span>
+          </label>
+          <label class="option">
+            <input type="radio" name="mode" id="mode-observe" value="observe">
+            <span class="option-body">
+              <span class="option-title">仅记录</span>
+              <span class="option-desc">只统计不处理（推荐先观察一天）</span>
+            </span>
+          </label>
+        </div>
+        <div class="card-divider"></div>
+        <div class="row row-compact">
+          <div class="row-text">
+            <h2 class="card-title">手动标记模式</h2>
+            <p class="hint">开启后页面每条评论（含折叠条下方）旁出现「🛡 标记机器人 / 这是真人」按钮；默认关闭</p>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="markmode-toggle" aria-label="手动标记模式">
+            <span class="slider" aria-hidden="true"></span>
+          </label>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 class="card-title">匹配强度</h2>
+        <div class="segmented" role="radiogroup" aria-label="匹配强度">
+          <label class="seg-item">
+            <input type="radio" name="level" id="level-conservative" value="conservative">
+            <span>保守</span>
+          </label>
+          <label class="seg-item">
+            <input type="radio" name="level" id="level-balanced" value="balanced">
+            <span>平衡（默认）</span>
+          </label>
+          <label class="seg-item">
+            <input type="radio" name="level" id="level-aggressive" value="aggressive">
+            <span>激进</span>
+          </label>
+        </div>
+        <p class="hint">激进误伤更多，保守漏网更多</p>
+      </section>
+
+      <section class="card">
+        <div class="row">
+          <div class="row-text">
+            <h2 class="card-title">自动学习</h2>
+            <p class="hint">只统计强特征命中，可在下面撤销</p>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="autolearn-toggle" aria-label="自动学习">
+            <span class="slider" aria-hidden="true"></span>
+          </label>
+        </div>
+        <div class="row row-inline">
+          <label class="inline-label" for="learn-after-select">同一账号命中</label>
+          <select class="select" id="learn-after-select">
+            <option value="2">2</option>
+            <option value="3" selected>3</option>
+            <option value="5">5</option>
+            <option value="10">10</option>
+          </select>
+          <span class="inline-text">次后直接隐藏</span>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 class="card-title">手动屏蔽账号名</h2>
+        <div class="name-form">
+          <input class="text-input" type="text" id="name-input" maxlength="40" placeholder="例如：大肥鱼" autocomplete="off" spellcheck="false">
+          <button class="btn btn-primary" type="button" id="name-add">添加</button>
+        </div>
+        <div class="chips" id="name-list"></div>
+        <p class="empty" id="name-empty">还没有手动屏蔽的账号名</p>
+        <p class="hint">按名称包含匹配、忽略大小写；例如填「肥鱼」会同时命中「大肥鱼」</p>
+      </section>
+
+      <section class="card">
+        <div class="row">
+          <h2 class="card-title">已学习账号</h2>
+          <span class="count" id="learned-count">0</span>
+        </div>
+        <ul class="account-list" id="learned-list"></ul>
+        <p class="empty" id="learned-empty">还没有已学习的账号，先打开「仅记录」观察一天吧</p>
+      </section>
+
+      <section class="card">
+        <div class="row">
+          <h2 class="card-title">白名单</h2>
+          <span class="count" id="whitelist-count">0</span>
+        </div>
+        <ul class="account-list" id="whitelist-list"></ul>
+        <p class="empty" id="whitelist-empty">白名单为空。被误伤的账号可以加到这里</p>
+      </section>
+
+      <section class="card">
+        <h2 class="card-title">统计</h2>
+        <div class="stats">
+          <div class="stat">
+            <span class="stat-num" id="stat-collapsed">0</span>
+            <span class="stat-label">今日折叠</span>
+          </div>
+          <div class="stat">
+            <span class="stat-num" id="stat-hidden">0</span>
+            <span class="stat-label">今日隐藏</span>
+          </div>
+          <div class="stat">
+            <span class="stat-num" id="stat-total">0</span>
+            <span class="stat-label">累计命中</span>
+          </div>
+          <div class="stat">
+            <span class="stat-num" id="stat-learned">0</span>
+            <span class="stat-label">已学习账号</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 class="card-title">数据</h2>
+        <div class="data-actions">
+          <button class="btn" type="button" id="export-btn">导出 JSON</button>
+          <button class="btn" type="button" id="import-btn">导入 JSON</button>
+          <button class="btn btn-danger" type="button" id="clear-btn">清空数据</button>
+        </div>
+        <input type="file" id="import-file" accept=".json,application/json" hidden>
+        <p class="hint">导出的备份只含设置、已学习、名称屏蔽、白名单；导入会合并而不是覆盖</p>
+      </section>
+    </main>
+
+    <footer class="app-footer">
+      <p>只在本机修改页面，不上传任何数据，不碰账号</p>
+    </footer>
+
+    <div class="toast" id="toast" role="status" hidden></div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

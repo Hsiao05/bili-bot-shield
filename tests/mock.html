@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>别看大肥鱼了！· 判定与折叠演示</title>
+<!--
+  离线演示页（不连 B 站、不加载扩展代码，只复用 src/rules.js 的判定库）。
+  打开方式：双击本文件，或在项目根目录起一个本地静态服务器后访问 /tests/mock.html。
+  假数据共 12 条（5 条机器人风格 + 7 条正常），用于展示打分、折叠与档位/模式切换。
+-->
+<style>
+  :root {
+    --bg: #0e1116;
+    --panel: #161b23;
+    --panel-2: #1c222c;
+    --line: #2a3240;
+    --text: #e6edf3;
+    --muted: #8b97a8;
+    --accent: #4ea1ff;
+    --danger: #ff6b6b;
+    --warn: #f0b429;
+    --ok: #3fb950;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: radial-gradient(1200px 600px at 50% -200px, #1b2433 0%, var(--bg) 60%);
+    color: var(--text);
+    font: 14px/1.6 "Segoe UI", "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+    min-height: 100vh;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 28px 18px 48px; }
+  header h1 { margin: 0; font-size: 22px; letter-spacing: .5px; }
+  header h1 .sub { color: var(--muted); font-size: 13px; font-weight: 400; margin-left: 8px; }
+  header p.desc { color: var(--muted); margin: 6px 0 18px; }
+  .controls {
+    display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .controls label { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; }
+  .controls select {
+    background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
+    border-radius: 7px; padding: 6px 10px; font-size: 13px; outline: none;
+  }
+  .controls select:focus { border-color: var(--accent); }
+  #stats { margin-left: auto; color: var(--muted); font-size: 12.5px; }
+  .legend { color: var(--muted); font-size: 12px; margin: 12px 2px 20px; }
+  .legend b { color: #c9d4e3; font-weight: 600; }
+
+  #list { display: flex; flex-direction: column; gap: 12px; }
+  .list-title { color: var(--muted); font-size: 12.5px; margin: 0 2px 2px; }
+
+  .card {
+    display: flex; gap: 12px; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 10px; padding: 12px 14px;
+  }
+  .card.is-hit { border-color: rgba(255, 107, 107, .55); }
+  .avatar {
+    width: 38px; height: 38px; flex: 0 0 38px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 700; color: #fff; user-select: none;
+  }
+  .body { min-width: 0; flex: 1; }
+  .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .name { font-weight: 600; }
+  .uid, .tag { color: var(--muted); font-size: 12px; }
+  .tag { border: 1px solid var(--line); border-radius: 5px; padding: 0 6px; }
+  .score-badge {
+    margin-left: auto; font-size: 12px; font-weight: 700; border-radius: 999px;
+    padding: 1px 10px; border: 1px solid var(--line); color: var(--muted);
+  }
+  .score-badge.hit { color: #fff; background: rgba(255, 107, 107, .18); border-color: rgba(255, 107, 107, .6); }
+  .score-badge.warn { color: var(--warn); border-color: rgba(240, 180, 41, .5); }
+  .score-badge.log { color: var(--warn); background: rgba(240, 180, 41, .12); border-color: rgba(240, 180, 41, .5); }
+  .text { margin: 7px 0 8px; white-space: pre-wrap; word-break: break-word; }
+  .reasons { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    font-size: 11.5px; color: #b9c6d8; background: var(--panel-2);
+    border: 1px solid var(--line); border-radius: 999px; padding: 0 8px;
+  }
+  .chip.negative { color: #ffb3b3; background: rgba(255, 107, 107, .08); border-color: rgba(255, 107, 107, .3); }
+
+  .folded { border: 1px dashed rgba(255, 107, 107, .45); border-radius: 10px; background: rgba(255, 107, 107, .04); }
+  .fold-bar {
+    display: flex; align-items: center; gap: 9px; width: 100%;
+    background: transparent; border: 0; color: var(--text); text-align: left;
+    padding: 11px 14px; cursor: pointer; font: inherit; border-radius: 10px;
+  }
+  .fold-bar:hover { background: rgba(255, 107, 107, .08); }
+  .fold-bar .shield { font-size: 15px; }
+  .fold-bar .bar-title { color: #ffb3b3; font-weight: 600; white-space: nowrap; }
+  .fold-bar .bar-score { color: var(--muted); font-size: 12px; white-space: nowrap; }
+  .fold-bar .bar-text {
+    color: var(--muted); font-size: 12.5px; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0;
+  }
+  .fold-bar .bar-toggle { color: var(--accent); font-size: 12.5px; white-space: nowrap; }
+  .fold-body { border-top: 1px dashed var(--line); }
+  .fold-body .card { border: 0; border-radius: 0 0 10px 10px; background: transparent; }
+  .folded.open { background: var(--panel); }
+
+  .hidden-note, .load-error {
+    border: 1px dashed var(--line); border-radius: 10px; padding: 12px 14px;
+    color: var(--muted); background: var(--panel);
+  }
+  .load-error { border-color: rgba(255, 107, 107, .5); color: #ffb3b3; line-height: 1.8; }
+  footer { color: var(--muted); font-size: 12px; margin-top: 26px; border-top: 1px solid var(--line); padding-top: 14px; }
+  footer code { color: #c9d4e3; background: var(--panel-2); border-radius: 4px; padding: 1px 5px; }
+  @media (max-width: 560px) {
+    #stats { margin-left: 0; width: 100%; }
+    .fold-bar .bar-text { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🛡 别看大肥鱼了！<span class="sub">判定 · 折叠 演示</span></h1>
+    <p class="desc">用 <code>src/rules.js</code> 给 12 条假评论打分，模拟扩展在 B 站评论区里的显示效果。纯离线，不连 B 站。</p>
+  </header>
+
+  <div class="controls">
+    <label>强度
+      <select id="level">
+        <option value="conservative">保守（8 分）</option>
+        <option value="balanced" selected>平衡（6 分）</option>
+        <option value="aggressive">激进（4 分）</option>
+      </select>
+    </label>
+    <label>模式
+      <select id="mode">
+        <option value="fold" selected>折叠</option>
+        <option value="hide">隐藏</option>
+        <option value="log">仅记录</option>
+      </select>
+    </label>
+    <span id="stats"></span>
+  </div>
+
+  <p class="legend">
+    判定依据：<b>@ 开头</b>、<b>AI 推荐语</b>、<b>20–160 字</b>、<b>无口语标点</b>、<b>账号名提示词</b>会加分；
+    <b>楼中楼</b>、<b>链接/图片/BV 号</b>、<b>提问</b>会减分。分数超过阈值才处理。
+  </p>
+
+  <p class="list-title">评论区预览（以下均为假数据）</p>
+  <div id="list"></div>
+
+  <footer>
+    这是离线演示，不连接 B 站；真实效果以扩展为准。<br>
+    如果页面没有内容或提示 rules.js 未加载，是 <code>file://</code> 下浏览器对本地脚本的限制，请在项目根目录用本地静态服务器打开
+    （例如 <code>npx serve</code> 或 <code>python -m http.server</code>），再访问 <code>/tests/mock.html</code>。
+  </footer>
+</div>
+
+<script src="../src/rules.js" onerror="window.__BSH_RULES_LOAD_ERROR__ = true;"></script>
+<script>
+(function () {
+  'use strict';
+
+  var R = window.BSH_RULES;
+  var listEl = document.getElementById('list');
+  var statsEl = document.getElementById('stats');
+  var levelEl = document.getElementById('level');
+  var modeEl = document.getElementById('mode');
+
+  if (!R) {
+    var err = document.createElement('div');
+    err.className = 'load-error';
+    err.textContent = '无法加载 ../src/rules.js。Chrome 在 file:// 下通常可以加载本地脚本；' +
+      '若被拦截，请在项目根目录起本地静态服务器（例如 npx serve 或 python -m http.server）后重新打开本页。';
+    listEl.appendChild(err);
+    return;
+  }
+
+  var LEVEL_LABEL = { conservative: '保守', balanced: '平衡', aggressive: '激进' };
+  var MODE_LABEL = { fold: '折叠', hide: '隐藏', log: '仅记录' };
+
+  // 假数据：5 条机器人风格 + 7 条正常（含 @好友、哈哈、提问、楼中楼、超长链接、只有名字像）
+  var DATA = [
+    { uid: '10001', uname: '大肥鱼本鱼', message: '@小明 这期把 DeepSeek Harness 的插件讲清楚了，值得看' },
+    { uid: '10002', uname: '白饭不吃白饭', message: '@阿强 白饭这个视频整理得不错，推荐看看' },
+    { uid: '10003', uname: '鲸鱼娘', message: '@老王 这期视频讲得很清楚，干货很多，值得一看' },
+    { uid: '10004', uname: 'DSH_Token_88', message: '@小鹿 这个视频总结一下就是一键刷 B 站，推荐大家看看' },
+    { uid: '10005', uname: '鲸鲸爱看视频', message: '@阿蒙 这条视频讲得明白，一口气看完的，可以去看看' },
+    { uid: '20001', uname: '晚风轻语', message: '@小明 哈哈哈哈你看这个，笑死我了' },
+    { uid: '20002', uname: '路过的土豆', message: '上周我也刷到过，确实有点意思，不过后来没关注' },
+    { uid: '20003', uname: '小鹿乱撞', message: '@楼主 说得好', isSub: true },
+    { uid: '20004', uname: '阿蒙', message: '这插件在哪下载？我也想试试' },
+    { uid: '20005', uname: '老张的日常', message: '【图片】今天拍的晚霞，太美了' },
+    {
+      uid: '20006',
+      uname: '柠檬茶不加冰',
+      message: '安装过程还算顺利，配置项比预想的多，文档有些细节没写清楚，需要自己动手试一试才能明白。'.repeat(8) +
+        ' https://example.com/a'
+    },
+    { uid: '20007', uname: '大肥鱼小号', message: '今天天气不错，出去走走' }
+  ];
+
+  var state = { level: 'balanced', mode: 'fold' };
+
+  function el(tag, cls, text) {
+    var node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text != null) node.textContent = text;
+    return node;
+  }
+
+  function hueOf(uid) {
+    var h = 0;
+    var s = String(uid);
+    for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+    return h % 360;
+  }
+
+  function firstChar(text) {
+    var chars = Array.from(String(text || '?'));
+    return chars.length ? chars[0] : '?';
+  }
+
+  function clip(text, max) {
+    var chars = Array.from(String(text || ''));
+    return chars.length > max ? chars.slice(0, max).join('') + '…' : String(text || '');
+  }
+
+  // 判定为「减分」的 reason 用不同颜色，便于看懂为什么没命中
+  var NEGATIVE = ['楼中楼回复', '超长评论', '含链接/图片/BV', '像真人提问'];
+
+  function buildCard(c, r, recorded) {
+    var card = el('article', 'card' + (r.hit ? ' is-hit' : ''));
+
+    var avatar = el('div', 'avatar', firstChar(c.uname));
+    avatar.style.background = 'hsl(' + hueOf(c.uid) + ' 55% 42%)';
+    card.appendChild(avatar);
+
+    var body = el('div', 'body');
+    var meta = el('div', 'meta');
+    meta.appendChild(el('span', 'name', c.uname));
+    meta.appendChild(el('span', 'uid', 'UID ' + c.uid));
+    if (c.isSub) meta.appendChild(el('span', 'tag', '楼中楼'));
+
+    var badge = el('span', 'score-badge ' + (recorded ? 'log' : (r.hit ? 'hit' : (r.score >= r.threshold - 2 ? 'warn' : ''))),
+      r.score + ' 分 / 阈值 ' + r.threshold);
+    meta.appendChild(badge);
+    body.appendChild(meta);
+
+    body.appendChild(el('p', 'text', c.message));
+
+    var reasons = el('div', 'reasons');
+    if (recorded) reasons.appendChild(el('span', 'chip', '已记录（仅日志）'));
+    r.reasons.forEach(function (name) {
+      var negative = NEGATIVE.indexOf(name) !== -1;
+      reasons.appendChild(el('span', 'chip' + (negative ? ' negative' : ''), negative ? '− ' + name : '+ ' + name));
+    });
+    if (r.reasons.length === 0) reasons.appendChild(el('span', 'chip', '未命中任何规则'));
+    body.appendChild(reasons);
+
+    card.appendChild(body);
+    return card;
+  }
+
+  function buildFolded(c, r) {
+    var wrap = el('div', 'folded');
+    var bar = el('button', 'fold-bar');
+    bar.type = 'button';
+    bar.setAttribute('aria-expanded', 'false');
+
+    bar.appendChild(el('span', 'shield', '🛡'));
+    bar.appendChild(el('span', 'bar-title', '疑似机器人评论'));
+    bar.appendChild(el('span', 'bar-score', r.score + ' 分'));
+    bar.appendChild(el('span', 'bar-text', clip(c.message, 26)));
+    var toggle = el('span', 'bar-toggle', '展开');
+    bar.appendChild(toggle);
+
+    var body = el('div', 'fold-body');
+    body.appendChild(buildCard(c, r, false));
+    body.hidden = true;
+
+    bar.addEventListener('click', function () {
+      var willOpen = body.hidden;
+      body.hidden = !willOpen;
+      bar.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+      toggle.textContent = willOpen ? '收起' : '展开';
+      wrap.classList.toggle('open', willOpen);
+    });
+
+    wrap.appendChild(bar);
+    wrap.appendChild(body);
+    return wrap;
+  }
+
+  function render() {
+    var threshold = R.THRESHOLDS[state.level];
+    var scored = DATA.map(function (c) {
+      return { c: c, r: R.scoreComment(c, { level: state.level }) };
+    });
+    var hitCount = scored.filter(function (x) { return x.r.hit; }).length;
+
+    statsEl.textContent = '共 ' + scored.length + ' 条 · 命中 ' + hitCount + ' 条 · 阈值 ' + threshold +
+      ' 分 · ' + LEVEL_LABEL[state.level] + ' / ' + MODE_LABEL[state.mode];
+
+    listEl.textContent = '';
+
+    if (state.mode === 'hide' && hitCount > 0) {
+      listEl.appendChild(el('div', 'hidden-note',
+        '🙈 已按当前规则隐藏 ' + hitCount + ' 条疑似机器人评论（切到「折叠」可查看原文与理由）'));
+    }
+
+    scored.forEach(function (x) {
+      var c = x.c;
+      var r = x.r;
+      if (r.hit && state.mode === 'hide') return;
+      if (r.hit && state.mode === 'fold') {
+        listEl.appendChild(buildFolded(c, r));
+        return;
+      }
+      listEl.appendChild(buildCard(c, r, r.hit && state.mode === 'log'));
+    });
+  }
+
+  levelEl.addEventListener('change', function () {
+    state.level = levelEl.value;
+    render();
+  });
+  modeEl.addEventListener('change', function () {
+    state.mode = modeEl.value;
+    render();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

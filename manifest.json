@@ -1,0 +1,59 @@
+{
+  "manifest_version": 3,
+  "name": "别看大肥鱼了！",
+  "version": "0.2.0",
+  "description": "在本地折叠 / 隐藏 B 站评论区里疑似 DeepSeek 机器人（大肥鱼、白饭、鲸鱼娘、鲸鲸等）发送的评论。纯前端修改，不碰账号、不联网。",
+  "minimum_chrome_version": "111",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_title": "别看大肥鱼了！",
+    "default_popup": "src/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "permissions": [
+    "storage",
+    "scripting",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "*://*.bilibili.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "*://www.bilibili.com/*",
+        "*://t.bilibili.com/*"
+      ],
+      "js": [
+        "src/rules.js",
+        "src/content.js"
+      ],
+      "run_at": "document_start",
+      "css": [
+        "src/content.css"
+      ]
+    },
+    {
+      "matches": [
+        "*://www.bilibili.com/*",
+        "*://t.bilibili.com/*"
+      ],
+      "js": [
+        "src/rules.js",
+        "src/main-world.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    }
+  ]
+}
